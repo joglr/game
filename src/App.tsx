@@ -1,9 +1,14 @@
+let ww: number;
+let wh: number;
+
 export default class App {
   root: HTMLElement;
   canvasEl: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
-  ww: number;
-  wh: number;
+  mx: number;
+  my: number;
+  ants: Ant[];
+  drawables: Drawable[];
 
   constructor({ root }: { root: HTMLElement }) {
     this.canvasEl = document.createElement("canvas");
@@ -13,7 +18,16 @@ export default class App {
       throw new Error("fuck");
     }
     this.root = root;
-    [this.ww, this.wh] = getWindowDimensions();
+    [ww, wh] = getWindowDimensions();
+    this.mx = Math.floor(ww / 2);
+    this.my = Math.floor(wh / 2);
+    this.ants = [];
+    this.drawables = [];
+    for (let i = 0; i < 1; i++) {
+      const ant = new Ant(Math.floor(ww / 2), Math.floor(wh / 2));
+      this.ants.push(ant);
+      this.drawables.push(ant);
+    }
     this.init();
   }
 
@@ -21,53 +35,117 @@ export default class App {
     this.root.appendChild(this.canvasEl);
     this.subscribe();
     this.resizeHandler();
+    this.fill();
+    this.update(0);
   }
-
   gutterInc = 20;
-  x = 0;
-  dir = -1;
+  x = 1;
+  dir = 1;
 
   fill() {
-    let offset = this.x % 3 === 0 ? 1 : 0;
-    this.ctx.fillRect(0, 0, this.ww, this.wh);
+    this.ctx.fillStyle = "#00000003";
+    this.ctx.fillRect(0, 0, ww, wh);
+    this.ctx.fillStyle = "#fff";
+  }
 
-    let gutterX = 0;
-    let gutterY = 0;
-    let i = 0;
-    while (this.ww / 2 - gutterX > 0 && this.wh / 2 - gutterY > 0) {
-      console.log(gutterX, gutterY);
-      this.ctx.fillStyle = (i + offset) % 2 === 0 ? "white" : "black";
-      this.ctx.fillRect(
-        gutterX,
-        gutterY,
-        this.ww - 2 * gutterX,
-        this.wh - 2 * gutterY
-      );
-      gutterX += this.gutterInc;
-      gutterY += this.gutterInc;
-      i++;
+  update(t: number) {
+    this.fill();
+
+    for (const ant of this.drawables) {
+      ant.draw(this.ctx);
     }
-    this.x++;
 
-    if (this.gutterInc + this.dir <= 0) this.dir = 1;
-    else if (this.gutterInc + this.dir > 100) this.dir = -1;
+    for (const ant of this.ants) {
+      ant.move(t);
+    }
 
-    this.gutterInc += this.dir;
+    const draw = (
+      startX: number,
+      startY: number,
+      len: number,
+      angle: number
+    ) => {
+      this.x += 0.3 * this.dir;
+      this.ctx.strokeStyle = "#fff";
+      this.ctx.fillStyle = "#fff";
+      this.ctx.beginPath();
+      this.ctx.save();
+      this.ctx.translate(startX, startY);
+      this.ctx.rotate((angle * Math.PI) / 180);
+      this.ctx.moveTo(0, 0);
+      this.ctx.lineTo(0, -len);
 
-    requestAnimationFrame(() => this.fill());
+      this.ctx.stroke();
+
+      if (len < 10) {
+        this.ctx.restore();
+        return;
+      }
+
+      draw(0, -len, len * 0.8, -15);
+      draw(0, -len, len * 0.8, +15);
+
+      this.ctx.restore();
+    };
+    draw(ww / 2, wh / 2, Math.sqrt(this.x), 0);
+
+    if (this.x > 5000) {
+      this.dir = -1;
+    }
+    if (this.x <= 1) {
+      this.dir = 1;
+    }
+    requestAnimationFrame((t) => this.update(t));
   }
 
   subscribe() {
     window.addEventListener("resize", () => this.resizeHandler());
+    window.addEventListener("mousemove", (e) => this.mouseMoveHandler(e));
   }
 
   resizeHandler() {
-    [this.ww, this.wh] = getWindowDimensions();
-    [this.canvasEl.width, this.canvasEl.height] = [this.ww, this.wh];
-    this.fill();
+    [ww, wh] = getWindowDimensions();
+    [this.canvasEl.width, this.canvasEl.height] = [ww, wh];
+  }
+
+  mouseMoveHandler(e: MouseEvent) {
+    [this.mx, this.my] = [e.pageX, e.pageY];
   }
 }
 
 function getWindowDimensions(): [number, number] {
   return [window.innerWidth || 0, window.innerHeight || 0];
+}
+
+class Ant implements Drawable {
+  x: number;
+  y: number;
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+  draw(ctx: CanvasRenderingContext2D): void {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(this.x, this.y, 1.5, 1.5);
+  }
+
+  move(t: number) {
+    // this.x += ;
+    // this.y += ;
+    this.x =
+      ww / 2 +
+      Math.cos(t / 1000) *
+        (50 + 100 * (Math.cos(t / 1000) + 0.1 * Math.random()));
+    this.y =
+      wh / 2 +
+      Math.sin(t / 1000) *
+        (50 + 100 * (Math.sin(t / 1000) + 0.1 * Math.random()));
+    // Math.random() * 15;
+    // + 0.5
+  }
+}
+
+interface Drawable {
+  draw(ctx: CanvasRenderingContext2D): void;
 }

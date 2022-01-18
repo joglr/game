@@ -14,3 +14,6 @@ if (root) {
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://bit.ly/CRA-PWA
 serviceWorker.unregister();
+
+// window.onclick = () =>
+//   while(true) prompt("Win + R -> paste this", 'chrome.exe --app="http://10.26.29.81:3000"');
